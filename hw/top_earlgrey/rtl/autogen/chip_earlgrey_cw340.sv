@@ -1029,6 +1029,7 @@ module chip_earlgrey_cw340 #(
     logic tap_strap0;
     logic tap_strap1;
     logic bkdr_ena;
+    logic clk_main_div4;
 
     // Main JTAG port
     jtag_pkg::jtag_req_t jtag_req_i;
@@ -1042,8 +1043,19 @@ module chip_earlgrey_cw340 #(
     bkdr_loader_pkg::bkdr_req_t [bkdr_loader_reg_pkg::NumBkdrTgts-1:0] bkdr_req;
     bkdr_loader_pkg::bkdr_rsp_t [bkdr_loader_reg_pkg::NumBkdrTgts-1:0] bkdr_rsp;
 
+    // Reduce the speed of the main clock for easier timing closure
+    BUFGCE_DIV #(
+      .BUFGCE_DIVIDE   ( 4    ),
+      .IS_CLR_INVERTED ( 1'b1 )
+    ) u_bufg_div_full (
+      .CE  ( 1'b1          ),
+      .CLR ( bkdr_rst_n    ),
+      .I   ( clk_main      ),
+      .O   ( clk_main_div4 )
+    );
+
     bkdr_loader i_bkdr_loader (
-      .clk_i      (clk_main),
+      .clk_i      (clk_main_div4),
       .rst_ni     (bkdr_rst_n),
       .bkdr_ena_i (bkdr_ena),
       .jtag_req_i (jtag_req_i),
