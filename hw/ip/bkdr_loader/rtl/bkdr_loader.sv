@@ -106,8 +106,24 @@ module bkdr_loader
 
   // If bkdr_en_q is set, the JTAG is muxed to the bkdr_loader,
   // otherwise it is forwarded to the system JTAG.
-  assign jtag_bkdr_req = bkdr_en_q ? jtag_req_i    : '0;
-  assign jtag_req_o    = bkdr_en_q ? '0            : jtag_req_i;
+  assign jtag_bkdr_req.tdi     = bkdr_en_q ? jtag_req_i.tdi    : '0;
+  assign jtag_bkdr_req.tms     = bkdr_en_q ? jtag_req_i.tms    : '0;
+  assign jtag_bkdr_req.trst_n  = bkdr_en_q ? jtag_req_i.trst_n : '0;
+  BUFGCE BUFGCE_jtag_bkdr_req_clk_gate (
+      .O  (jtag_bkdr_req.tck),
+      .I  (jtag_req_i.tck),
+      .CE (bkdr_en_q)
+  );
+
+  assign jtag_req_o.tdi        = bkdr_en_q ? '0 : jtag_req_i.tdi    ;
+  assign jtag_req_o.tms        = bkdr_en_q ? '0 : jtag_req_i.tms    ;
+  assign jtag_req_o.trst_n     = bkdr_en_q ? '0 : jtag_req_i.trst_n ;
+  BUFGCE BUFGCE_jtag_req_o_clk_gate (
+      .O  (jtag_req_o.tck),
+      .I  (jtag_req_i.tck),
+      .CE (~bkdr_en_q)
+  );
+
   assign jtag_rsp_o    = bkdr_en_q ? jtag_bkdr_rsp : jtag_rsp_i;
 
   always_comb begin : proc_bkdr_fsm
