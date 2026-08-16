@@ -4,6 +4,93 @@
 
 send_msg "Designcheck 1-1" INFO "Checking design"
 
+# Check synchroniser placement, both flops should be in the same CLB
+# ---------------------------------------------------------------------------
+# CDC synchronizer placement check
+#
+# Verifies that for every prim_flop_2sync-style two-stage synchronizer bus,
+# each bit's first-stage flop (u_sync_1/q_o_reg[N]) and second-stage flop
+# (u_sync_2/q_o_reg[N]) have been placed in the same physical SITE (CLB
+# slice), as ASYNC_REG is supposed to enforce.
+# ---------------------------------------------------------------------------
+
+# Clear any stale state from a previous run in this session
+array unset bit_group_sites
+
+set max_fails_to_report 10
+set fail_count 0
+set pass_count 0
+
+# --- Step 1: gather every relevant flop primitive in the design, once -----
+set all_flop_cells [get_cells -hierarchical -filter {
+    PRIMITIVE_LEVEL == LEAF &&
+    (REF_NAME == "FDRE" || REF_NAME == "FDCE" || REF_NAME == "FDPE" || REF_NAME == "FDSE")
+}]
+puts "Total flop cells found in design: [llength $all_flop_cells]"
+
+# --- Step 2: keep only flops belonging to a u_sync_1 / u_sync_2 stage ------
+set synchronizer_flop_cells {}
+foreach flop_cell $all_flop_cells {
+    if {[string match {*/u_sync_1/q_o_reg\[*\]} $flop_cell] ||
+        [string match {*/u_sync_2/q_o_reg\[*\]} $flop_cell]} {
+        lappend synchronizer_flop_cells $flop_cell
+    }
+}
+puts "Synchronizer flop cells matched: [llength $synchronizer_flop_cells]"
+
+# --- Step 3: group flops by (parent instance, bit index) -------------------
+foreach flop_cell $synchronizer_flop_cells {
+
+    set path_segments  [split $flop_cell /]
+    set segment_count  [llength $path_segments]
+
+    set stage_name     [lindex $path_segments [expr {$segment_count - 2}]]
+    set parent_instance [join [lrange $path_segments 0 [expr {$segment_count - 3}]] /]
+
+    if {![regexp {\[(\d+)\]$} $flop_cell -> bit_index]} {
+        continue
+    }
+
+    set group_key "${parent_instance}|${bit_index}"
+
+    set flop_site [get_property SITE $flop_cell]
+    lappend bit_group_sites($group_key) [list $stage_name $flop_site $flop_cell]
+}
+puts "Number of bit-groups found: [array size bit_group_sites]"
+
+# --- Step 4: check each group for a site mismatch --------------------------
+foreach group_key [lsort [array names bit_group_sites]] {
+
+    if {$fail_count >= $max_fails_to_report} {
+        break
+    }
+
+    set stage_entries [set bit_group_sites($group_key)]
+
+    set sites_in_group {}
+    foreach stage_entry $stage_entries {
+        lassign $stage_entry stage_name flop_site flop_cell
+        lappend sites_in_group $flop_site
+    }
+    set unique_sites [lsort -unique $sites_in_group]
+
+    if {[llength $unique_sites] > 1} {
+        incr fail_count
+        lassign [split $group_key |] parent_instance bit_index
+        puts "FAIL #$fail_count: $parent_instance bit\[$bit_index\]"
+        foreach stage_entry $stage_entries {
+            lassign $stage_entry stage_name flop_site flop_cell
+            puts "    $flop_cell  ($stage_name)  SITE=$flop_site"
+        }
+    } else {
+        incr pass_count
+    }
+}
+
+puts ""
+puts "Checked [array size bit_group_sites] bit-groups: $pass_count PASS, $fail_count FAIL (fail reporting capped at $max_fails_to_report)"
+
+
 # Ensure the design meets timing
 set slack_ns [get_property SLACK [get_timing_paths -delay_type min_max]]
 send_msg "Designcheck 1-2" INFO "Slack is ${slack_ns} ns."
