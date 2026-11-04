@@ -104,8 +104,9 @@ module top_englishbreakfast #(
   output prim_pad_wrapper_pkg::pad_attr_t [pinmux_reg_pkg::NDioPads-1:0] dio_attr_o,
 
   // Inter-module Signal External type
-  output clkmgr_pkg::clkmgr_out_t       clkmgr_clocks_o,
-  output clkmgr_pkg::clkmgr_cg_en_t       clkmgr_cg_en_o,
+  output clkmgr_pkg::clkmgr_out_primary_t       clkmgr_clocks_o,
+  output clkmgr_pkg::clkmgr_out_secondary_t       clkmgr_clocks_secondary_o,
+  output clkmgr_pkg::clkmgr_cg_en_primary_t       clkmgr_cg_en_o,
   output prim_mubi_pkg::mubi4_t       clk_main_jitter_en_o,
   output prim_mubi_pkg::mubi4_t       hi_speed_sel_o,
   input  prim_mubi_pkg::mubi4_t       div_step_down_req_i,
@@ -127,8 +128,9 @@ module top_englishbreakfast #(
   output pwrmgr_pkg::pwr_ast_req_t       pwrmgr_ast_req_o,
   input  pwrmgr_pkg::pwr_ast_rsp_t       pwrmgr_ast_rsp_i,
   input  logic [1:0] por_n_i,
-  output rstmgr_pkg::rstmgr_out_t       rstmgr_resets_o,
-  output rstmgr_pkg::rstmgr_rst_en_t       rstmgr_rst_en_o,
+  output rstmgr_pkg::rstmgr_out_primary_t       rstmgr_resets_o,
+  output rstmgr_pkg::rstmgr_out_secondary_t       rstmgr_resets_secondary_o,
+  output rstmgr_pkg::rstmgr_rst_en_primary_t       rstmgr_rst_en_o,
   input  logic       usbdev_usb_rx_d_i,
   output logic       usbdev_usb_tx_d_o,
   output logic       usbdev_usb_tx_se0_o,
@@ -244,13 +246,16 @@ module top_englishbreakfast #(
   .RvCoreIbexCsrMvendorId(RvCoreIbexCsrMvendorId),
   .RvCoreIbexCsrMimpId(RvCoreIbexCsrMimpId)
   ) englishbreakfast_pd_main (
-    // Clocks and clock gating control from clkmgr
+    // Clocks and clock gating control from the primary partition of the clkmgr
     .clkmgr_clocks_i(clkmgr_clocks_o),
-    .clkmgr_cg_en_i (clkmgr_cg_en_o),
+    // Clocks and clock gating control from the secondary partition of the clkmgr
+    .clkmgr_clocks_secondary_i(clkmgr_clocks_secondary_o),
 
-    // Resets and reset assert info from rstmgr
+    // Resets and reset asserted information from the primary partition of the rstmgr
     .rstmgr_resets_i(rstmgr_resets_o),
-    .rstmgr_rst_en_i(rstmgr_rst_en_o),
+
+    // Resets and reset asserted information from the secondary partition of the rstmgr
+    .rstmgr_resets_secondary_i(rstmgr_resets_secondary_o),
 
     // Manual DFT signals
     .scan_rst_ni,
@@ -324,10 +329,11 @@ module top_englishbreakfast #(
   .SecRstmgrCheck(SecRstmgrCheck),
   .SecRstmgrMaxSyncDelay(SecRstmgrMaxSyncDelay)
   ) englishbreakfast_pd_aon (
-    // All externally supplied clocks
+    // All externally supplied clocks of the primary partition
     .clk_main_i(ast_base_clks_i.clk_sys),
     .clk_io_i  (ast_base_clks_i.clk_io ),
     .clk_usb_i (ast_base_clks_i.clk_usb),
+    // All externally supplied clocks of the secondary partition
     .clk_aon_i (ast_base_clks_i.clk_aon),
 
     // Manual DFT signals
@@ -361,6 +367,7 @@ module top_englishbreakfast #(
 
     // Regular ports (auto-generated)
     .clkmgr_clocks_o,
+    .clkmgr_clocks_secondary_o,
     .clkmgr_cg_en_o,
     .clk_main_jitter_en_o,
     .hi_speed_sel_o,
@@ -373,6 +380,7 @@ module top_englishbreakfast #(
     .pwrmgr_ast_rsp_i,
     .por_n_i,
     .rstmgr_resets_o,
+    .rstmgr_resets_secondary_o,
     .rstmgr_rst_en_o
   );
 

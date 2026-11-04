@@ -6,6 +6,16 @@
   peri_reqs = reqs.get("peripheral", [])
   int_reqs = reqs.get("int", [])
   debug_reqs = reqs.get("debug", [])
+  from ipgen.manager_split import (rstmgr_clocks, rstmgr_hosted_domains, rstmgr_is_array,
+                                   rstmgr_out_domains, rstmgr_routed_rsts, rstmgr_rst_en_routed,
+                                   rstmgr_routed_roots)
+  # The resets that a partition generates cross to the other partition once, as single bits, if
+  # the other partition's power domain uses them.
+  def routed_rsts(to_part):
+    return rstmgr_routed_rsts(output_rsts, to_part)
+  split_clks = rstmgr_clocks(clk_freqs, leaf_rsts, rst_ni)
+  aon_clks = split_clks.aon
+  n_rst = sum(2 if r['shadowed'] else 1 for r in output_rsts)
 %>\
 
 package rstmgr_pkg;
@@ -24,8 +34,75 @@ package rstmgr_pkg;
   parameter int ${device.upper()} = ${loop.index};
 % endfor
 
-  // resets generated and broadcast
+  // Resets generated and broadcast. Each partition outputs the resets that its power domain uses.
+  // A reset that a partition outputs for every power domain is an array over the domains. A reset
+  // that it outputs for a single power domain is a single bit.
+% for part in ('secondary', 'primary'):
   // SEC_CM: LEAF.RST.SHADOW
+  typedef struct packed {
+  % for rst in output_rsts:
+<% outs = rstmgr_out_domains(rst, part)
+arr = '[PowerDomains-1:0] ' if outs and rstmgr_is_array(outs, power_domains) else '' %>\
+    % if outs:
+      % if rst['shadowed']:
+    logic ${arr}rst_${rst['name']}_shadowed_n;
+      % endif
+    logic ${arr}rst_${rst['name']}_n;
+    % endif
+  % endfor
+  } rstmgr_out_${part}_t;
+
+% endfor
+  // Each struct below holds all the resets that a partition generates, before the routing to the
+  // partitions.
+% for part in ('secondary', 'primary'):
+  typedef struct packed {
+  % for rst in output_rsts:
+<% hosted = rstmgr_hosted_domains(rst, part)
+arr = '[PowerDomains-1:0] ' if hosted and rstmgr_is_array(hosted, power_domains) else '' %>\
+    % if hosted:
+      % if rst['shadowed']:
+    logic ${arr}rst_${rst['name']}_shadowed_n;
+      % endif
+    logic ${arr}rst_${rst['name']}_n;
+    % endif
+  % endfor
+  } rstmgr_generated_${part}_t;
+
+% endfor
+  // Reset asserted indications for the alert handlers. The primary partition outputs all of them.
+  // The secondary partition's indications cross to it in intraip_s2p.
+  typedef struct packed {
+% for rst in output_rsts:
+<% arr = '[PowerDomains-1:0] ' if rstmgr_is_array(rst['domains'], power_domains) else '' %>\
+  % if rst['shadowed']:
+    prim_mubi_pkg::mubi4_t ${arr}${rst['name']}_shadowed;
+  % endif
+    prim_mubi_pkg::mubi4_t ${arr}${rst['name']};
+% endfor
+  } rstmgr_rst_en_primary_t;
+
+  // Each struct below holds all the reset asserted indications that a partition generates, before
+  // the routing.
+% for part in ('secondary', 'primary'):
+  typedef struct packed {
+  % for rst in output_rsts:
+<% hosted = rstmgr_hosted_domains(rst, part)
+arr = '[PowerDomains-1:0] ' if hosted and rstmgr_is_array(hosted, power_domains) else '' %>\
+    % if hosted:
+      % if rst['shadowed']:
+    prim_mubi_pkg::mubi4_t ${arr}${rst['name']}_shadowed;
+      % endif
+    prim_mubi_pkg::mubi4_t ${arr}${rst['name']};
+    % endif
+  % endfor
+  } rstmgr_rst_en_generated_${part}_t;
+
+% endfor
+  parameter int NumOutputRst = ${n_rst} * PowerDomains;
+
+  // The structs below serve the single power-domain reset manager (rstmgr.sv). They hold every
+  // reset, and its reset asserted indication, for every power domain.
   typedef struct packed {
 % for rst in output_rsts:
   % if rst['shadowed']:
@@ -35,18 +112,53 @@ package rstmgr_pkg;
 % endfor
   } rstmgr_out_t;
 
-  // reset indication for alert handler
   typedef struct packed {
-<% n_rst = 0 %>\
 % for rst in output_rsts:
   % if rst['shadowed']:
-    prim_mubi_pkg::mubi4_t [PowerDomains-1:0] ${rst['name']}_shadowed;<% n_rst += 1 %>
+    prim_mubi_pkg::mubi4_t [PowerDomains-1:0] ${rst['name']}_shadowed;
   % endif
-    prim_mubi_pkg::mubi4_t [PowerDomains-1:0] ${rst['name']};<% n_rst += 1 %>
+    prim_mubi_pkg::mubi4_t [PowerDomains-1:0] ${rst['name']};
 % endfor
   } rstmgr_rst_en_t;
 
-  parameter int NumOutputRst = ${n_rst} * PowerDomains;
+  // Signalling between the two partitions of the split reset manager.
+  // Secondary (reset roots, always-on side) to primary
+  typedef struct packed {
+    // The reset roots, per power domain, that the primary partition's leaf resets have as parents.
+% for root, domain in rstmgr_routed_roots(leaf_rsts):
+    logic rst_${root}_n_${domain.lower()};
+% endfor
+    // The power manager's reset request, forwarded for the RESET_INFO logic.
+    pwrmgr_pkg::pwr_rst_req_t pwr;
+    // The aggregated errors of the leaf resets that the secondary partition hosts.
+    logic cnsty_chk_err;
+    logic fsm_err;
+    // The resets that the secondary partition generates and the primary partition's power domain
+    // uses.
+% for r in routed_rsts('primary'):
+    logic ${r};
+% endfor
+    // The reset asserted indications that the secondary partition generates. The primary partition
+    // outputs them.
+% for f, _, _ in rstmgr_rst_en_routed(output_rsts):
+    prim_mubi_pkg::mubi4_t ${f};
+% endfor
+  } intraip_s2p_t;
+
+  // Primary to secondary
+  typedef struct packed {
+% if routed_rsts('secondary'):
+    // The resets that the primary partition generates and the secondary partition's power domain
+    // uses.
+  % for r in routed_rsts('secondary'):
+    logic ${r};
+  % endfor
+% else:
+    // Nothing flows to the secondary partition in this configuration. The reserved field keeps the
+    // struct from being empty.
+    logic reserved;
+% endif
+  } intraip_p2s_t;
 
   // cpu reset requests and status
   typedef struct packed {

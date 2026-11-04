@@ -17,7 +17,8 @@ package ast_intraip_pkg;
     logic vcc_pok_str;
   } pwr_s2p_t;
 
-  // Clock and reset signals for secondary to primary partition communication
+  // Clock and reset signals for secondary to primary partition communication. The clocks and resets
+  // that the primary partition uses enter it directly, so only the always-on clock crosses here.
   typedef struct packed {
     logic clk_aon;
   } clk_rst_s2p_t;

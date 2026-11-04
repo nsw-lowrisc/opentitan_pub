@@ -13,6 +13,8 @@ package rstmgr_reg_pkg;
   parameter int NumSwResets = 10;
   parameter int NumTotalResets = 8;
   parameter int NumAlerts = 2;
+  parameter int NumAlertsPrimary = 2;
+  parameter int NumAlertsSecondary = 0;
 
   // Address widths within the block
   parameter int BlockAw = 7;

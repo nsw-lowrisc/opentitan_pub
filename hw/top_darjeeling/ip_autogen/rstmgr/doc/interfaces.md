@@ -13,7 +13,7 @@ Parameter                   | Default       | Description
 <!-- BEGIN CMDGEN util/regtool.py --interfaces ./hw/top_darjeeling/ip_autogen/rstmgr/data/rstmgr.hjson -->
 Referring to the [Comportable guideline for peripheral device functionality](https://opentitan.org/book/doc/contributing/hw/comportability), the module **`rstmgr`** has the following hardware interfaces defined
 - Primary Clock: **`clk_i`**
-- Other Clocks: **`clk_aon_i`**, **`clk_io_i`**, **`clk_main_i`**, **`clk_por_i`**
+- Other Clocks: **`clk_io_i`**, **`clk_main_i`**, **`clk_por_i`**
 - Bus Device Interfaces (TL-UL): **`tl`**
 - Bus Host Interfaces (TL-UL): *none*
 - Peripheral Pins for Chip IO: *none*
@@ -21,16 +21,23 @@ Referring to the [Comportable guideline for peripheral device functionality](htt
 
 ## [Inter-Module Signals](https://opentitan.org/book/doc/contributing/hw/comportability/index.html#inter-signal-handling)
 
-| Port Name   | Package::Struct                    | Type    | Act   |   Width | Description                                                                                                                  |
-|:------------|:-----------------------------------|:--------|:------|--------:|:-----------------------------------------------------------------------------------------------------------------------------|
-| por_n       | logic                              | uni     | rcv   |       2 | Root power on reset signals from ast. There is one root reset signal for each core power domain.                             |
-| pwr         | pwr_rst                            | req_rsp | rsp   |       1 | Reset request signals from power manager. Power manager can request for specific domains of the lc/sys reset tree to assert. |
-| resets      | rstmgr_pkg::rstmgr_out             | uni     | req   |       1 | Leaf resets fed to the system.                                                                                               |
-| rst_en      | rstmgr_pkg::rstmgr_rst_en          | uni     | req   |       1 | Low-power-group outputs used by alert handler.                                                                               |
-| alert_dump  | alert_handler_pkg::alert_crashdump | uni     | rcv   |       1 | Alert handler crash dump information.                                                                                        |
-| cpu_dump    | rv_core_ibex_pkg::cpu_crash_dump   | uni     | rcv   |       1 | Main processing element crash dump information.                                                                              |
-| sw_rst_req  | prim_mubi_pkg::mubi4               | uni     | req   |       1 | Software requested system reset to pwrmgr.                                                                                   |
-| tl          | tlul_pkg::tl                       | req_rsp | rsp   |       1 |                                                                                                                              |
+| Port Name        | Package::Struct                    | Type    | Act   |   Width | Description                                                                                                                  |
+|:-----------------|:-----------------------------------|:--------|:------|--------:|:-----------------------------------------------------------------------------------------------------------------------------|
+| scanmode         | prim_mubi_pkg::mubi4               | uni     | rcv   |       1 | Scan mode, for the secondary partition                                                                                       |
+| scan_rst_n       | logic                              | uni     | rcv   |       1 | Scan reset, for the secondary partition                                                                                      |
+| por_n            | logic                              | uni     | rcv   |       2 | Root power on reset signals from ast. There is one root reset signal for each core power domain.                             |
+| pwr              | pwr_rst                            | req_rsp | rsp   |       1 | Reset request signals from power manager. Power manager can request for specific domains of the lc/sys reset tree to assert. |
+| resets           | rstmgr_pkg::rstmgr_out_primary     | uni     | req   |       1 | Leaf resets fed to the system.                                                                                               |
+| resets_secondary | rstmgr_pkg::rstmgr_out_secondary   | uni     | req   |       1 | Leaf resets fed to the system.                                                                                               |
+| rst_en           | rstmgr_pkg::rstmgr_rst_en_primary  | uni     | req   |       1 | Low-power-group outputs used by alert handler.                                                                               |
+| alert_dump       | alert_handler_pkg::alert_crashdump | uni     | rcv   |       1 | Alert handler crash dump information.                                                                                        |
+| cpu_dump         | rv_core_ibex_pkg::cpu_crash_dump   | uni     | rcv   |       1 | Main processing element crash dump information.                                                                              |
+| sw_rst_req       | prim_mubi_pkg::mubi4               | uni     | req   |       1 | Software requested system reset to pwrmgr.                                                                                   |
+| intraip_s2p      | rstmgr_pkg::intraip_s2p            | uni     | req   |       1 | Secondary-to-primary partition communication                                                                                 |
+| intraip_s2p      | rstmgr_pkg::intraip_s2p            | uni     | rcv   |       1 | Secondary-to-primary partition communication                                                                                 |
+| intraip_p2s      | rstmgr_pkg::intraip_p2s            | uni     | req   |       1 | Primary-to-secondary partition communication                                                                                 |
+| intraip_p2s      | rstmgr_pkg::intraip_p2s            | uni     | rcv   |       1 | Primary-to-secondary partition communication                                                                                 |
+| tl               | tlul_pkg::tl                       | req_rsp | rsp   |       1 |                                                                                                                              |
 
 ## Security Alerts
 

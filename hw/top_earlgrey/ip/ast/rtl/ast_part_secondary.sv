@@ -26,8 +26,8 @@ module ast_part_secondary #(
   input por_n_i,                              // Power ON Reset
 
   // sensed clocks / resets
-  input clkmgr_pkg::clkmgr_out_t sns_clks_i,  // Sensed Clocks
-  input rstmgr_pkg::rstmgr_out_t sns_rsts_i,  // Sensed Resets
+  input clkmgr_pkg::clkmgr_out_secondary_t sns_clks_i,  // Sensed Clocks, secondary clkmgr
+  input rstmgr_pkg::rstmgr_out_secondary_t sns_rsts_i,  // Sensed Resets, secondary rstmgr
 
   // power OK control
   // In non-power aware DV environment, the <>_supp_i is for debug only!

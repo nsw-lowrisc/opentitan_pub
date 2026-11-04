@@ -444,25 +444,36 @@
     { name: "rstmgr",
       type: "rstmgr",
       template_type: "rstmgr",
+      // Both partitions are in the Aon power domain.
       clock_srcs: {
-        clk_i: {
-          clock: "io",
-          group: "powerup"
+        primary: {
+          clk_i: {
+            clock: "io",
+            group: "powerup"
+          },
+          clk_por_i: "io", clk_main_i: "main", clk_io_i: "io"
         },
-        clk_por_i: "io", clk_aon_i: "aon", clk_main_i: "main", clk_io_i: "io"
+        secondary: {
+          clk_i: {
+            clock: "io",
+            group: "powerup"
+          },
+          clk_aon_i: "aon", clk_io_i: "io", clk_por_i: "io"
+        }
       },
-      clock_group: "powerup",
+      clock_group: {primary: "powerup", secondary: "powerup"},
       reset_connections: {
-        rst_ni: {
-          name: "lc_io",
-          domain: "Aon"
+        primary: {
+          rst_ni: {name: "lc_io", domain: "Aon"},
+          rst_por_ni: {name: "por_io", domain: "Aon"}
         },
-        rst_por_ni: {
-          name: "por_io",
-          domain: "Aon"
-        },
+        secondary: {
+          rst_ni: {name: "lc_io", domain: "Aon"},
+          rst_por_ni: {name: "por_io", domain: "Aon"}
+        }
       }
       domain: "Aon",
+      domain_secondary: "Aon",
       base_addr: {
         hart: "0x30410000",
       },
@@ -471,31 +482,25 @@
     { name: "clkmgr",
       type: "clkmgr",
       template_type: "clkmgr",
+      // Both partitions are in the Aon power domain.
       clock_srcs: {
-        clk_i: "io",
-        clk_main_i: {
-          group: "ast",
-          clock: "main"
+        primary: {
+          clk_i: "io",
+          clk_main_i: {group: "ast", clock: "main"},
+          clk_io_i: {group: "ast", clock: "io"}
         },
-        clk_io_i: {
-          group: "ast",
-          clock: "io"
-        },
-        clk_aon_i: {
-          group: "ast",
-          clock: "aon"
+        secondary: {
+          clk_aon_i: {group: "ast", clock: "aon"}
         }
       },
-      clock_group: "powerup",
-      reset_connections: {rst_ni: "lc_io",
-                          rst_aon_ni: "lc_aon"
-                          rst_io_ni: "lc_io",
-                          rst_main_ni: "lc",
-                          rst_root_ni: "por_io",
-                          rst_root_io_ni: "por_io",
-                          rst_root_main_ni: "por",
-                         },
+      clock_group: {primary: "powerup", secondary: "powerup"},
+      reset_connections: {
+        primary: {rst_ni: "lc_io", rst_aon_ni: "lc_aon", rst_io_ni: "lc_io", rst_main_ni: "lc",
+                  rst_root_ni: "por_io", rst_root_io_ni: "por_io", rst_root_main_ni: "por"},
+        secondary: {rst_aon_ni: "lc_aon"}
+      },
       domain: "Aon",
+      domain_secondary: "Aon",
       base_addr: {
         hart: "0x30420000",
       },
@@ -1346,12 +1351,14 @@
     'top': [
         // top level net for clocks
         'clkmgr.clocks',
+        'clkmgr.clocks_secondary',
 
         // top level clock gating indications for alert subsystem
         'clkmgr.cg_en',
 
         // top level net for reset
         'rstmgr.resets',
+        'rstmgr.resets_secondary',
 
         // top level reset asserted indications for alert subsystem
         'rstmgr.rst_en',
@@ -1397,6 +1404,7 @@
         'pwrmgr.boot_status'                   : 'pwrmgr_boot_status_obs',
         'pwrmgr.ext_rst_ack'                   : 'pwrmgr_ext_rst_ack',
         'clkmgr.clocks'                        : '',
+        'clkmgr.clocks_secondary'              : '',
         'clkmgr.cg_en'                         : '',
         'clkmgr.jitter_en'                     : 'clk_main_jitter_en',
         'dma.sys'                              : 'dma_sys',
@@ -1456,6 +1464,7 @@
         'otp_macro.cfg'                        : 'otp_cfg',
         'rstmgr.por_n'                         : 'por_n',
         'rstmgr.resets'                        : '',
+        'rstmgr.resets_secondary'              : '',
         'rstmgr.rst_en'                        : '',
         'soc_proxy.misc_tl_h2d'                : 'ctn_misc_tl_h2d',
         'soc_proxy.misc_tl_d2h'                : 'ctn_misc_tl_d2h',
@@ -1805,6 +1814,8 @@
           'racl_ctrl.racl_policies'              : { unused:      true             },
           'racl_ctrl.racl_error_external'        : { signal:      "ext_racl_error" },
           'clkmgr.cg_en'                         : { unused:      true             },
+          'rstmgr.resets_secondary'               : { unused:      true             },
+          'clkmgr.clocks_secondary'               : { unused:      true             },
           'rstmgr.rst_en'                        : { unused:      true             },
           'pwrmgr.ext_rst_ack'                   : { unused:      true             },
           'pwrmgr.boot_status'                   : { signal:     'pwrmgr_boot_status' },
@@ -1929,6 +1940,8 @@
           'racl_ctrl.racl_policies'              : { unused:      true             },
           'racl_ctrl.racl_error_external'        : { signal:      "ext_racl_error" },
           'clkmgr.cg_en'                         : { unused:      true             },
+          'rstmgr.resets_secondary'               : { unused:      true             },
+          'clkmgr.clocks_secondary'               : { unused:      true             },
           'rstmgr.rst_en'                        : { unused:      true             },
           'pwrmgr.ext_rst_ack'                   : { unused:      true             },
           'pwrmgr.boot_status'                   : { signal:     'pwrmgr_boot_status' },

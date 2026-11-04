@@ -27,6 +27,8 @@ filesets:
       - rtl/rstmgr_por.sv
       - rtl/rstmgr_crash_info.sv
       - rtl/rstmgr_leaf_rst.sv
+      - rtl/rstmgr_part_primary.sv
+      - rtl/rstmgr_part_secondary.sv
       - rtl/rstmgr.sv
     file_type: systemVerilogSource
 

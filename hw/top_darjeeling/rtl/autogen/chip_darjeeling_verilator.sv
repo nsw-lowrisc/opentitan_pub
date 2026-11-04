@@ -261,8 +261,9 @@ module chip_darjeeling_verilator #(
   tlul_pkg::tl_d2h_t ast_tl_rsp;
 
   // Generated clocks and resets
-  clkmgr_pkg::clkmgr_out_t clkmgr_clocks;
-  rstmgr_pkg::rstmgr_out_t rstmgr_resets;
+  // The top outputs the clocks and resets of the primary partitions of the clkmgr and the rstmgr.
+  clkmgr_pkg::clkmgr_out_primary_t clkmgr_clocks;
+  rstmgr_pkg::rstmgr_out_primary_t rstmgr_resets;
 
   // monitored clock
   logic sck_monitor;
@@ -448,8 +449,8 @@ module chip_darjeeling_verilator #(
     .clk_ast_tlul_i (clkmgr_clocks.clk_io_infra),
     .clk_ast_alert_i (clkmgr_clocks.clk_io_secure),
     .clk_ast_rng_i (clkmgr_clocks.clk_main_secure),
-    .rst_ast_tlul_ni (rstmgr_resets.rst_lc_io_n[rstmgr_pkg::DomainMainSel]),
-    .rst_ast_alert_ni (rstmgr_resets.rst_lc_io_n[rstmgr_pkg::DomainMainSel]),
+    .rst_ast_tlul_ni (rstmgr_resets.rst_lc_io_n),
+    .rst_ast_alert_ni (rstmgr_resets.rst_lc_io_n),
     .rst_ast_rng_ni (rstmgr_resets.rst_lc_n[rstmgr_pkg::DomainMainSel]),
 
     // pok test for FPGA
@@ -531,7 +532,7 @@ module chip_darjeeling_verilator #(
     .NumDmiByteAbits(18)
   ) u_tlul_jtag_dtm (
     .clk_i      (clkmgr_clocks.clk_main_infra),
-    .rst_ni     (rstmgr_resets.rst_sys_n[rstmgr_pkg::DomainMainSel]),
+    .rst_ni     (rstmgr_resets.rst_sys_n),
     .jtag_i     (jtag_req),
     .jtag_o     (jtag_rsp),
     .scan_rst_ni(scan_rst_n),
@@ -767,6 +768,7 @@ module chip_darjeeling_verilator #(
     .pwrmgr_boot_status_obs_o              (pwrmgr_boot_status       ),
     .pwrmgr_ext_rst_ack_i                  (1'b0                     ),
     .clkmgr_clocks_o                       (clkmgr_clocks            ),
+    .clkmgr_clocks_secondary_o             (                         ),
     .clkmgr_cg_en_o                        (                         ),
     .clk_main_jitter_en_o                  (clk_main_jitter_en       ),
     .dma_sys_req_o                         (                         ),
@@ -831,6 +833,7 @@ module chip_darjeeling_verilator #(
     .otp_cfg_i                             (otp_cfg                  ),
     .por_n_i                               (por_n                    ),
     .rstmgr_resets_o                       (rstmgr_resets            ),
+    .rstmgr_resets_secondary_o             (                         ),
     .rstmgr_rst_en_o                       (                         ),
     .ctn_misc_tl_h2d_i                     (ctn_misc_tl_h2d_i        ),
     .ctn_misc_tl_d2h_o                     (ctn_misc_tl_d2h_o        ),

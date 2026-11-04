@@ -35,8 +35,10 @@ module ast (
   input por_ni,                               // Power ON Reset
 
   // sensed clocks / resets
-  input clkmgr_pkg::clkmgr_out_t sns_clks_i,  // Sensed Clocks
-  input rstmgr_pkg::rstmgr_out_t sns_rsts_i,  // Sensed Resets
+  input clkmgr_pkg::clkmgr_out_primary_t sns_clks_primary_i,      // Sensed Clocks, primary clkmgr
+  input clkmgr_pkg::clkmgr_out_secondary_t sns_clks_secondary_i,  // Sensed Clocks, secondary clkmgr
+  input rstmgr_pkg::rstmgr_out_primary_t sns_rsts_primary_i,      // Sensed Resets, primary rstmgr
+  input rstmgr_pkg::rstmgr_out_secondary_t sns_rsts_secondary_i,  // Sensed Resets, secondary rstmgr
 `ifdef AST_BYPASS_CLK
   // Clocks' Oschillator bypass for OS FPGA
   input ast_pkg::clks_osc_byp_t clk_osc_byp_i,  // Clocks' Oschillator bypass for OS FPGA/VERILATOR
@@ -285,8 +287,8 @@ ast_part_secondary #(
   .rst_ast_alert_ni        ( rst_ast_alert_ni ),
   .clk_ast_ext_i           ( clk_ast_ext_i ),
   .por_n_i                 ( por_ni ),
-  .sns_clks_i              ( sns_clks_i ),
-  .sns_rsts_i              ( sns_rsts_i ),
+  .sns_clks_i              ( sns_clks_secondary_i ),
+  .sns_rsts_i              ( sns_rsts_secondary_i ),
   .vx_supp_i               ( vx_supp ),
   .ast_pwst_h_o            ( ast_pwst_h_o ),
   .rstmgr_por_n_o          ( ), // Unused - part of ast_pwst
@@ -328,6 +330,8 @@ ast_part_secondary #(
 ast_part_primary #(
   .EntropyStreams ( EntropyStreams )
 ) u_ast_part_primary (
+  .sns_clks_i              ( sns_clks_primary_i ),
+  .sns_rsts_i              ( sns_rsts_primary_i ),
   .tl_i                    ( tl_i ),
   .tl_o                    ( tl_o ),
   .clk_ast_tlul_i          ( clk_ast_tlul_i ),

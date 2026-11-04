@@ -23,6 +23,8 @@ filesets:
       - lowrisc:earlgrey_ip:clkmgr_pkg:0.1
       - lowrisc:earlgrey_ip:clkmgr_reg:0.1
     files:
+      - rtl/clkmgr_part_primary.sv
+      - rtl/clkmgr_part_secondary.sv
       - rtl/clkmgr.sv
       - rtl/clkmgr_byp.sv
       - rtl/clkmgr_clk_status.sv
