@@ -620,6 +620,24 @@ def _get_rstmgr_params(top: ConfigT) -> ParamsT:
     with_alert_handler = lib.find_module(top['module'],
                                          'alert_handler') is not None
 
+    # Tell the templates which partition generates each reset and which partitions output it.
+    # Check that the rstmgr is split, and that it can generate each of its resets.
+    lib.validate_split_rstmgr(top)
+    # Record the partitions that output each reset.
+    outs = lib.get_rstmgr_reset_out_partitions(top)
+
+    def with_outputs(rst):
+        """Return a reset as a dict, with the partition that generates it and the partitions
+        that output it, by power domain."""
+        ret = rst._asdict()
+        ret["partition"] = {d: lib.get_rstmgr_reset_partition(top, rst.name, d)
+                            for d in rst.domains}
+        ret["out_partitions"] = {d: outs[(rst.name, d)] for d in rst.domains}
+        return ret
+    # Record both for the output resets and the leaf resets.
+    output_rsts = [with_outputs(r) for r in output_rsts]
+    leaf_rsts = [with_outputs(r) for r in leaf_rsts]
+
     ipgen_params = get_ipgen_params(rstmgr)
     ipgen_params.update({
         "clk_freqs": clk_freqs,

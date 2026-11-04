@@ -755,9 +755,6 @@ def _elaborate_clock_srcs(top: ConfigT,
     clocks = top['clocks']
     clock_connections = OrderedDict()
 
-    # prefixes for all clocks of this endpoint partition
-    prefixes = lib.get_clock_prefixes(top, ep_domain)
-
     for port, clk in clock_srcs.items():
         group_name, src_name = _get_clock_group_name(clk, ep_grp)
 
@@ -774,6 +771,8 @@ def _elaborate_clock_srcs(top: ConfigT,
             group = clocks.groups[group_name]
 
             name = ''
+            # The prefix depends on the clkmgr partition that hosts the clocks of this source.
+            prefixes = lib.get_clock_prefixes(top, ep_domain, clocks.all_srcs.get(src_name))
             hier_name = prefixes[group.src]
 
             if group.src == 'ext':
@@ -791,7 +790,7 @@ def _elaborate_clock_srcs(top: ConfigT,
 
             # add clock to a particular group
             clk_sig = clocks.add_clock_to_group(group, clk_name, src_name)
-            clk_sig.add_endpoint(ep_name, port)
+            clk_sig.add_endpoint(ep_name, port, ep_domain)
 
             src_clk = clocks.all_srcs.get(src_name)
             if group.src == 'ext' and src_clk is not None and src_clk.module is not None:
@@ -1164,6 +1163,18 @@ def _make_lpg_entry(top: ConfigT,
     }
 
 
+def _partition_has_alerts(top: ConfigT, module: ConfigT, partition: str) -> bool:
+    '''Return whether the given partition of a module owns any alert.
+
+    An alert without a partition belongs to the primary partition.
+    '''
+    alerts = list(top['alert'])
+    for group_alerts in top['outgoing_alert'].values():
+        alerts.extend(group_alerts)
+    return any(a['module_name'] == module['name'] and
+               a.get('partition', PART_PRIMARY) == partition for a in alerts)
+
+
 def create_alert_lpgs(top: ConfigT, name_to_block: IpBlocksT):
     '''Loop over modules and determine number of unique LPGs'''
     lpg_dict = {}
@@ -1192,8 +1203,21 @@ def create_alert_lpgs(top: ConfigT, name_to_block: IpBlocksT):
                     not block.clocking.has_partition(partition)):
                 continue
 
+            # A raw clock is a clock that the clkmgr does not manage. It comes from a module of the
+            # top or from outside the top. A partition without alerts that runs on a raw clock
+            # cannot have a low-power group (LPG). It does not need one either. The always-on
+            # partition of a split clkmgr is such a partition.
+            block_clock = block.get_primary_clock(partition)
+            clk = clock_connections[block_clock.clock]
+            # A clock from a module of the top is a ModuleClockRef. A clock from outside the top is
+            # in a clock group whose src is 'ext'. A clock in no group is not a raw clock.
+            raw_clock = (isinstance(clk, ModuleClockRef) or
+                         getattr(clock_groups.get(clk.split('.')[-1]), 'src', None) == 'ext')
+            if raw_clock and not _partition_has_alerts(top, module, partition):
+                continue
+
             lpg_entry = _make_lpg_entry(top, clock_groups, module,
-                                        block.get_primary_clock(partition),
+                                        block_clock,
                                         clock_connections, reset_connections)
             lpg_name = lpg_entry['name']
             lpg_names[partition] = lpg_name
