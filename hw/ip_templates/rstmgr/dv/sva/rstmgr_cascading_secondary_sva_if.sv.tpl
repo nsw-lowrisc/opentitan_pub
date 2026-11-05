@@ -1,21 +1,42 @@
 // Copyright lowRISC contributors (OpenTitan project).
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
-
+//
+// The cascading checks of the single power-domain reset manager, for the resets that the secondary
+// partition generates. rstmgr_bind binds this interface to rstmgr_part_secondary.
+// rstmgr_cascading_primary_sva_if has the checks of the resets that the primary partition
+// generates.
 <%
-sorted_clks = sorted(list(clk_freqs.keys()))
-has_sys_io = any("sys_io" in d.get('name') for d in output_rsts) if output_rsts else False
+from topgen.lib import Name
+from ipgen.manager_split import (rstmgr_clocks, rstmgr_hosted_domains, rstmgr_is_array,
+                                 rstmgr_routed_roots)
+part = 'secondary'
+part_clks = getattr(rstmgr_clocks(clk_freqs, leaf_rsts, rst_ni), part)
+sorted_clks = sorted(clk_freqs.keys())
+preferred = "io_div4" if "io_div4" in sorted_clks else "io"
+rsts = {r['name']: r for r in output_rsts}
 
-if "io_div4" in sorted_clks:
-    preferred_domain = "io_div4"
-elif "io" in sorted_clks:
-    preferred_domain = "io"
-else:
-    assert 0, "No preferred clock available"
+def sel(rst, domain):
+  """Return the select of a power domain in this partition's struct field of a reset."""
+  hosted = rstmgr_hosted_domains(rst, part)
+  return f"[rstmgr_pkg::Domain{domain}Sel]" if rstmgr_is_array(hosted, power_domains) else ""
 
-preferred_por_n = f"rst_por_{preferred_domain}_n"
-preferred_rst_n = f"rst_sys_{preferred_domain}_n"
-preferred_clk_i = f"clk_{preferred_domain}_i"
+# The leaf resets that the cascading checks cover, with their power domain and edge bounds, as in
+# the single power-domain reset manager: (assertion name, reset, shadowed, power domain, bounds).
+# The reset tree gives the parent of each.
+links = [("CascadeLcToLcAon", "lc_aon", False, "Aon", "SysCycles"),
+         ("CascadeLcToLc", "lc", False, "Main", "SysCycles"),
+         ("CascadeLcToLcShadowed", "lc", True, "Main", "SysCycles"),
+         ("CascadeSysToSys", "sys", False, "Main", "PeriCycles"),
+         ("CascadeSysToSysIoDiv4", f"sys_{preferred}", False, "Aon", "SysCycles"),
+         ("CascadeEffAonToRstPorIoDiv4", f"por_{preferred}", False, "Aon", "SyncCycles")]
+links += [(f"CascadeEffAonToRstPor{clk.capitalize()}", "por" if clk == "main" else f"por_{clk}",
+           False, "Aon", "SyncCycles")
+          for clk in sorted_clks if "aon" not in clk and "io_div4" not in clk]
+# Keep the links whose reset this partition generates. A top without the reset has no link for it.
+links = [(n, r, s, d, b) for n, r, s, d, b in links
+         if r in rsts and d in rsts[r]['domains'] and (rsts[r]['shadowed'] or not s) and
+         d in rstmgr_hosted_domains(rsts[r], part)]
 %>\
 // This has assertions that check the reset outputs of rstmgr cascade properly.
 // This means higher level resets always cause the lower level ones to assert.
@@ -30,21 +51,19 @@ preferred_clk_i = f"clk_{preferred_domain}_i"
 //
 // Peripheral resets cascade from sys, and are checked in rstmgr_sw_rst_sva_if since they
 // require additional inputs.
-interface rstmgr_cascading_sva_if (
+interface rstmgr_cascading_secondary_sva_if (
   input logic clk_i,
-% for clk in sorted_clks:
+% for clk in part_clks:
   input logic clk_${clk}_i,
 % endfor
   input [rstmgr_pkg::PowerDomains-1:0] por_n_i,
-  input rstmgr_pkg::rstmgr_out_t resets_o,
-  input [rstmgr_pkg::PowerDomains-1:0] rst_lc_req,
-  input [rstmgr_pkg::PowerDomains-1:0] rst_sys_req,
-  input [rstmgr_pkg::PowerDomains-1:0] rst_lc_src_n,
-  input [rstmgr_pkg::PowerDomains-1:0] rst_sys_src_n,
-  input logic scan_rst_ni,
-  input prim_mubi_pkg::mubi4_t scanmode_i
+  input pwrmgr_pkg::pwr_rst_req_t pwr_i,
+  input pwrmgr_pkg::pwr_rst_rsp_t pwr_o,
+  input logic scan_rst_n_i,
+  input prim_mubi_pkg::mubi4_t scanmode_i,
+  input rstmgr_pkg::rstmgr_generated_secondary_t resets_generated,
+  input [rstmgr_pkg::PowerDomains-1:0] rst_por_aon_n
 );
-
   // The min and max bounds on the number of cycles for an edge to occur.
   typedef struct {
     int min;
@@ -99,9 +118,12 @@ interface rstmgr_cascading_sva_if (
       `FALL_ASSERT(_name, _from, _to, _cycles, _clk) ${"\\"}
       `RISE_ASSERTS(_name, _from, _to, _cycles, _clk)
 
+  // rst_por_aon_n is the secondary partition's own, for every power domain, as the single
+  // power-domain reset manager generated it.
+
   // A fall in por_n_i leads to a fall in rst_por_aon_n[0].
   `FALL_ASSERT(CascadePorToAon, por_n_i[rstmgr_pkg::DomainAonSel],
-               resets_o.rst_por_aon_n[rstmgr_pkg::DomainAonSel], PorCycles, clk_aon_i)
+               rst_por_aon_n[rstmgr_pkg::DomainAonSel], PorCycles, clk_aon_i)
 
   // A number of consecutive cycles with por_n_i inactive (high) should cause the aon resets to
   // become inactive. This checks POR stretching.
@@ -112,7 +134,7 @@ interface rstmgr_cascading_sva_if (
   always_comb scanmode = prim_mubi_pkg::mubi4_test_true_strict(scanmode_i);
 
   logic scan_reset_n;
-  always_comb scan_reset_n = !scanmode || scan_rst_ni;
+  always_comb scan_reset_n = !scanmode || scan_rst_n_i;
 
   // In scanmode only scan_rst_ni controls reset, so por_n_i is ignored.
   logic aon_por_n_i;
@@ -127,73 +149,54 @@ interface rstmgr_cascading_sva_if (
   // The reset stretching assertion.
   `ASSERT(StablePorToAonRise_A,
           PorStable_S |-> ##[0:(PorCycles.rise.max-PorCycles.rise.min)]
-          !aon_por_n_i || resets_o.rst_por_aon_n[0],
+          !aon_por_n_i || rst_por_aon_n[rstmgr_pkg::DomainAonSel],
           clk_aon_i, disable_sva)
 
   // The scan reset to Por.
-  `ASSERT(ScanRstToAonRise_A, scan_reset_n && scanmode |-> resets_o.rst_por_aon_n[0], clk_aon_i,
-          disable_sva)
+  `ASSERT(ScanRstToAonRise_A,
+          scan_reset_n && scanmode |-> rst_por_aon_n[rstmgr_pkg::DomainAonSel],
+          clk_aon_i, disable_sva)
 
   logic [rstmgr_pkg::PowerDomains-1:0] effective_aon_rst_n;
   always_comb
-    effective_aon_rst_n = resets_o.rst_por_aon_n & {rstmgr_pkg::PowerDomains{scan_reset_n}};
-
-  // The AON reset triggers the various POR reset for the different clock domains through
-  // synchronizers.
-  // Only domain 0 cascading is checked here, because the current system doesn't have any consumers
-  // of ${preferred_por_n}.
-  `CASCADED_ASSERTS(CascadeEffAonToRstPorIoDiv4, effective_aon_rst_n[0],
-                    resets_o.${preferred_por_n}[0], SyncCycles, ${preferred_clk_i})
+    effective_aon_rst_n = rst_por_aon_n & {rstmgr_pkg::PowerDomains{scan_reset_n}};
 
   // The internal reset is triggered by one of synchronized por.
   logic [rstmgr_pkg::PowerDomains-1:0] por_rst_n;
-  always_comb por_rst_n = resets_o.rst_por_aon_n;
+  always_comb por_rst_n = rst_por_aon_n;
 
   logic [rstmgr_pkg::PowerDomains-1:0] local_rst_or_lc_req_n;
-  always_comb local_rst_or_lc_req_n = por_rst_n & ~rst_lc_req;
+  always_comb local_rst_or_lc_req_n = por_rst_n & ~pwr_i.rst_lc_req;
 
   logic [rstmgr_pkg::PowerDomains-1:0] lc_rst_or_sys_req_n;
-  always_comb lc_rst_or_sys_req_n = por_rst_n & ~rst_sys_req;
+  always_comb lc_rst_or_sys_req_n = por_rst_n & ~pwr_i.rst_sys_req;
 
   for (genvar pd = 0; pd < rstmgr_pkg::PowerDomains; ++pd) begin : g_power_domains
     // The root lc reset is triggered either by the internal reset, or by the pwr_i.rst_lc_req
     // input. The latter is checked independently in pwrmgr_rstmgr_sva_if.
-    `CASCADED_ASSERTS(CascadeLocalRstToLc, local_rst_or_lc_req_n[pd], rst_lc_src_n[pd], LcCycles,
-                      clk_i)
+    `CASCADED_ASSERTS(CascadeLocalRstToLc, local_rst_or_lc_req_n[pd], pwr_o.rst_lc_src_n[pd],
+                      LcCycles, clk_i)
 
     // The root sys reset is triggered by the lc reset, or independently by external requests.
     // The latter is checked independently in pwrmgr_rstmgr_sva_if.
-    `CASCADED_ASSERTS(CascadeLcToSys, lc_rst_or_sys_req_n[pd], rst_sys_src_n[pd], SysCycles, clk_i)
-
-% if has_sys_io:
-    // Controlled by rst_sys_src_n.
-    if (pd == rstmgr_pkg::DomainAonSel) begin : gen_sys_${preferred_domain}_chk
-      `CASCADED_ASSERTS(CascadeSysToSysIoDiv4, rst_sys_src_n[pd], resets_o.${preferred_rst_n}[pd],
-                        SysCycles, ${preferred_clk_i})
-    end
-% endif
+    `CASCADED_ASSERTS(CascadeLcToSys, lc_rst_or_sys_req_n[pd], pwr_o.rst_sys_src_n[pd], SysCycles,
+                      clk_i)
   end
 
-  // Aon to POR
-% for clk in sorted_clks:
-  % if "aon" in clk or "io_div4" in clk:
-<% continue %>
-  % endif
-  `CASCADED_ASSERTS(CascadeEffAonToRstPor${clk.capitalize()}, effective_aon_rst_n[rstmgr_pkg::DomainAonSel],
-                    resets_o.rst_por_${clk + "_" if clk != "main" else ""}n[rstmgr_pkg::DomainAonSel], SyncCycles, clk_${clk}_i)
+  // The leaf resets that this partition generates follow their parents: the lc and sys roots,
+  // and the effective aon reset for the por resets.
+% for name, rst, shadowed, domain, bounds in links:
+<%
+parent = rsts[rst]['parent']
+above = {'lc_src': f"pwr_o.rst_lc_src_n[rstmgr_pkg::Domain{domain}Sel]",
+         'sys_src': f"pwr_o.rst_sys_src_n[rstmgr_pkg::Domain{domain}Sel]",
+         'por_aon': f"effective_aon_rst_n[rstmgr_pkg::Domain{domain}Sel]"}[parent]
+below = f"resets_generated.rst_{rst}{'_shadowed' if shadowed else ''}_n{sel(rsts[rst], domain)}"
+%>\
+  `CASCADED_ASSERTS(${name}, ${above},
+                    ${below},
+                    ${bounds}, clk_${rsts[rst]['clock']}_i)
 % endfor
-
-  // Controlled by rst_lc_src_n.
-  `CASCADED_ASSERTS(CascadeLcToLcAon, rst_lc_src_n[rstmgr_pkg::DomainAonSel],
-                    resets_o.rst_lc_aon_n[rstmgr_pkg::DomainAonSel], SysCycles, clk_aon_i)
-  `CASCADED_ASSERTS(CascadeLcToLc, rst_lc_src_n[rstmgr_pkg::DomainMainSel],
-                    resets_o.rst_lc_n[rstmgr_pkg::DomainMainSel], SysCycles, clk_main_i)
-
-  // Controlled by rst_sys_src_n.
-  `CASCADED_ASSERTS(CascadeSysToSys, rst_sys_src_n[rstmgr_pkg::DomainMainSel],
-                    resets_o.rst_sys_n[rstmgr_pkg::DomainMainSel], PeriCycles, clk_main_i)
-  `CASCADED_ASSERTS(CascadeLcToLcShadowed, rst_lc_src_n[rstmgr_pkg::DomainMainSel],
-                    resets_o.rst_lc_shadowed_n[rstmgr_pkg::DomainMainSel], SysCycles, clk_main_i)
 
   `undef FALL_ASSERT
   `undef RISE_ASSERTS

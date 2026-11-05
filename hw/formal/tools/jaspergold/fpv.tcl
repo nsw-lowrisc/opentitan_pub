@@ -179,21 +179,29 @@ if {($env(DUT_TOP) == "pinmux_tb") || ($env(DUT_TOP) == "pinmux_chip_tb")} {
   clock -rate {tl_i, cio_d_i, cio_dp_i, cio_dn_i, cio_sense_i} clk_i
   reset -expr {!rst_ni !rst_aon_ni}
 
-} elseif {$env(DUT_TOP) == "clkmgr"} {
+} elseif {$env(DUT_TOP) == "clkmgr_part_primary"} {
+  # The always-on clock comes from the secondary partition, through intraip_s2p_i.
   clock clk_main_i
   clock clk_i -both_edges
   clock clk_io_i -factor 1
   clock clk_usb_i -factor 1
-  clock clk_aon_i -factor 2
+  clock intraip_s2p_i.clk_aon -factor 2
   clock -rate -default clk_i
   reset -expr {!rst_ni !rst_main_ni}
 
-} elseif {$env(DUT_TOP) == "rstmgr"} {
+} elseif {$env(DUT_TOP) == "rstmgr_part_primary"} {
   clock clk_main_i
   clock clk_i -both_edges
   clock clk_io_i -factor 1
   clock clk_io_div4_i -factor 1
   clock clk_usb_i -factor 1
+  clock clk_aon_i -factor 2
+  clock -rate -default clk_i
+  reset -expr {!rst_ni !rst_por_ni}
+
+} elseif {$env(DUT_TOP) == "rstmgr_part_secondary"} {
+  clock clk_i -both_edges
+  clock clk_io_div4_i -factor 1
   clock clk_aon_i -factor 2
   clock -rate -default clk_i
   reset -expr {!rst_ni !rst_por_ni}
