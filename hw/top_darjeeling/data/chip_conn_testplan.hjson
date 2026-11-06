@@ -358,7 +358,8 @@
       stage: V2
       tests: ["clkmgr_infra_clk_flash_ctrl_clk",
               "clkmgr_infra_clk_rv_dm_clk",
-              "clkmgr_infra_clk_rom_clk",
+              "clkmgr_infra_clk_rom0_clk",
+              "clkmgr_infra_clk_rom1_clk",
               "clkmgr_infra_clk_rv_core_ibex_clk",
               "clkmgr_infra_clk_rv_core_ibex_edn_clk",
               "clkmgr_infra_clk_sram_ctrl_main_clk",
@@ -416,8 +417,8 @@
               "clkmgr_powerup_clk_pinmux_clk",
               "clkmgr_powerup_clk_pwrmgr_clk",
               "clkmgr_powerup_clk_pwrmgr_lc_clk",
-              "clkmgr_powerup_clk_rstmgr_por_clk",
-              "clkmgr_powerup_clk_rstmgr_io_clk"]
+              "clkmgr_powerup_clk_rstmgr_por_clk_primary", "clkmgr_powerup_clk_rstmgr_por_clk_secondary",
+              "clkmgr_powerup_clk_rstmgr_io_clk_primary", "clkmgr_powerup_clk_rstmgr_io_clk_secondary"]
       tags: ["conn"]
     }
     {
@@ -760,7 +761,7 @@
             '''
       stage: V2
       tests: ["rstmgr_lc_aon_aon_aon_timer_rst_aon_ni",
-              "rstmgr_lc_aon_aon_clkmgr_rst_aon_ni",
+              "rstmgr_lc_aon_aon_clkmgr_rst_aon_ni_primary", "rstmgr_lc_aon_aon_clkmgr_rst_aon_ni_secondary",
               "rstmgr_lc_aon_aon_pinmux_rst_aon_ni"]
       tags: ["conn"]
     }
@@ -789,7 +790,7 @@
               "rstmgr_lc_io_aon_pwrmgr_rst_lc_ni",
               "rstmgr_lc_io_aon_pinmux_rst_ni",
               "rstmgr_lc_io_aon_sram_ctrl_ret_rst_otp_ni",
-              "rstmgr_lc_io_aon_rstmgr_rst_ni"]
+              "rstmgr_lc_io_aon_rstmgr_rst_ni_primary", "rstmgr_lc_io_aon_rstmgr_rst_ni_secondary"]
       tags: ["conn"]
     }
     {
@@ -875,7 +876,7 @@
       tests: ["rstmgr_por_io_aon_clkmgr_rst_root_io_ni",
               "rstmgr_por_io_aon_clkmgr_rst_root_ni",
               "rstmgr_por_io_aon_pwrmgr_rst_ni",
-              "rstmgr_por_io_aon_rstmgr_rst_ni"]
+              "rstmgr_por_io_aon_rstmgr_rst_ni_primary", "rstmgr_por_io_aon_rstmgr_rst_ni_secondary"]
       tags: ["conn"]
     }
     {
