@@ -165,62 +165,6 @@ package rstmgr_pkg;
 
   parameter int NumOutputRst = 24 * PowerDomains;
 
-  // The structs below serve the single power-domain reset manager (rstmgr.sv). They hold every
-  // reset, and its reset asserted indication, for every power domain.
-  typedef struct packed {
-    logic [PowerDomains-1:0] rst_por_aon_n;
-    logic [PowerDomains-1:0] rst_por_n;
-    logic [PowerDomains-1:0] rst_por_io_n;
-    logic [PowerDomains-1:0] rst_por_io_div4_n;
-    logic [PowerDomains-1:0] rst_por_usb_n;
-    logic [PowerDomains-1:0] rst_lc_shadowed_n;
-    logic [PowerDomains-1:0] rst_lc_n;
-    logic [PowerDomains-1:0] rst_lc_aon_n;
-    logic [PowerDomains-1:0] rst_lc_io_n;
-    logic [PowerDomains-1:0] rst_lc_io_div4_shadowed_n;
-    logic [PowerDomains-1:0] rst_lc_io_div4_n;
-    logic [PowerDomains-1:0] rst_lc_usb_n;
-    logic [PowerDomains-1:0] rst_sys_n;
-    logic [PowerDomains-1:0] rst_sys_io_div4_n;
-    logic [PowerDomains-1:0] rst_spi_device_n;
-    logic [PowerDomains-1:0] rst_spi_host0_n;
-    logic [PowerDomains-1:0] rst_spi_host1_n;
-    logic [PowerDomains-1:0] rst_usb_n;
-    logic [PowerDomains-1:0] rst_usb_aon_n;
-    logic [PowerDomains-1:0] rst_i2c0_n;
-    logic [PowerDomains-1:0] rst_i2c1_n;
-    logic [PowerDomains-1:0] rst_i2c2_n;
-    logic [PowerDomains-1:0] rst_i3c0_n;
-    logic [PowerDomains-1:0] rst_i3c1_n;
-  } rstmgr_out_t;
-
-  typedef struct packed {
-    prim_mubi_pkg::mubi4_t [PowerDomains-1:0] por_aon;
-    prim_mubi_pkg::mubi4_t [PowerDomains-1:0] por;
-    prim_mubi_pkg::mubi4_t [PowerDomains-1:0] por_io;
-    prim_mubi_pkg::mubi4_t [PowerDomains-1:0] por_io_div4;
-    prim_mubi_pkg::mubi4_t [PowerDomains-1:0] por_usb;
-    prim_mubi_pkg::mubi4_t [PowerDomains-1:0] lc_shadowed;
-    prim_mubi_pkg::mubi4_t [PowerDomains-1:0] lc;
-    prim_mubi_pkg::mubi4_t [PowerDomains-1:0] lc_aon;
-    prim_mubi_pkg::mubi4_t [PowerDomains-1:0] lc_io;
-    prim_mubi_pkg::mubi4_t [PowerDomains-1:0] lc_io_div4_shadowed;
-    prim_mubi_pkg::mubi4_t [PowerDomains-1:0] lc_io_div4;
-    prim_mubi_pkg::mubi4_t [PowerDomains-1:0] lc_usb;
-    prim_mubi_pkg::mubi4_t [PowerDomains-1:0] sys;
-    prim_mubi_pkg::mubi4_t [PowerDomains-1:0] sys_io_div4;
-    prim_mubi_pkg::mubi4_t [PowerDomains-1:0] spi_device;
-    prim_mubi_pkg::mubi4_t [PowerDomains-1:0] spi_host0;
-    prim_mubi_pkg::mubi4_t [PowerDomains-1:0] spi_host1;
-    prim_mubi_pkg::mubi4_t [PowerDomains-1:0] usb;
-    prim_mubi_pkg::mubi4_t [PowerDomains-1:0] usb_aon;
-    prim_mubi_pkg::mubi4_t [PowerDomains-1:0] i2c0;
-    prim_mubi_pkg::mubi4_t [PowerDomains-1:0] i2c1;
-    prim_mubi_pkg::mubi4_t [PowerDomains-1:0] i2c2;
-    prim_mubi_pkg::mubi4_t [PowerDomains-1:0] i3c0;
-    prim_mubi_pkg::mubi4_t [PowerDomains-1:0] i3c1;
-  } rstmgr_rst_en_t;
-
   // Signalling between the two partitions of the split reset manager.
   // Secondary (reset roots, always-on side) to primary
   typedef struct packed {

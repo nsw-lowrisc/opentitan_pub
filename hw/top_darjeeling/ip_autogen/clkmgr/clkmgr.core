@@ -25,7 +25,6 @@ filesets:
     files:
       - rtl/clkmgr_part_primary.sv
       - rtl/clkmgr_part_secondary.sv
-      - rtl/clkmgr.sv
       - rtl/clkmgr_byp.sv
       - rtl/clkmgr_clk_status.sv
       - rtl/clkmgr_meas_chk.sv
@@ -66,7 +65,8 @@ targets:
       - tool_ascentlint ? (files_ascentlint_waiver)
       - tool_slang      ? (files_slang_waiver)
       - files_rtl
-    toplevel: clkmgr
+    # The primary partition: the registers and most of the logic.
+    toplevel: clkmgr_part_primary
 
   lint:
     <<: *default_target

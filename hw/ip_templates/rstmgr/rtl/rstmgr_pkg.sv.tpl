@@ -101,26 +101,6 @@ arr = '[PowerDomains-1:0] ' if hosted and rstmgr_is_array(hosted, power_domains)
 % endfor
   parameter int NumOutputRst = ${n_rst} * PowerDomains;
 
-  // The structs below serve the single power-domain reset manager (rstmgr.sv). They hold every
-  // reset, and its reset asserted indication, for every power domain.
-  typedef struct packed {
-% for rst in output_rsts:
-  % if rst['shadowed']:
-    logic [PowerDomains-1:0] rst_${rst['name']}_shadowed_n;
-  % endif
-    logic [PowerDomains-1:0] rst_${rst['name']}_n;
-% endfor
-  } rstmgr_out_t;
-
-  typedef struct packed {
-% for rst in output_rsts:
-  % if rst['shadowed']:
-    prim_mubi_pkg::mubi4_t [PowerDomains-1:0] ${rst['name']}_shadowed;
-  % endif
-    prim_mubi_pkg::mubi4_t [PowerDomains-1:0] ${rst['name']};
-% endfor
-  } rstmgr_rst_en_t;
-
   // Signalling between the two partitions of the split reset manager.
   // Secondary (reset roots, always-on side) to primary
   typedef struct packed {

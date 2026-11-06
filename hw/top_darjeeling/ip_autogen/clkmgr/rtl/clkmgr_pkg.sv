@@ -72,44 +72,6 @@ package clkmgr_pkg;
 
   parameter int NumOutputClk = 15;
 
-  // The structs below serve the single power-domain clock manager (clkmgr.sv). They hold every
-  // clock, and the clock gating indication of every clock.
-  typedef struct packed {
-    logic clk_io_powerup;
-    logic clk_aon_powerup;
-    logic clk_main_powerup;
-    logic clk_aon_infra;
-    logic clk_aon_timers;
-    logic clk_main_aes;
-    logic clk_main_hmac;
-    logic clk_main_kmac;
-    logic clk_main_otbn;
-    logic clk_io_infra;
-    logic clk_main_infra;
-    logic clk_io_secure;
-    logic clk_main_secure;
-    logic clk_io_timers;
-    logic clk_io_peri;
-  } clkmgr_out_t;
-
-  typedef struct packed {
-    prim_mubi_pkg::mubi4_t io_powerup;
-    prim_mubi_pkg::mubi4_t aon_powerup;
-    prim_mubi_pkg::mubi4_t main_powerup;
-    prim_mubi_pkg::mubi4_t aon_infra;
-    prim_mubi_pkg::mubi4_t aon_timers;
-    prim_mubi_pkg::mubi4_t main_aes;
-    prim_mubi_pkg::mubi4_t main_hmac;
-    prim_mubi_pkg::mubi4_t main_kmac;
-    prim_mubi_pkg::mubi4_t main_otbn;
-    prim_mubi_pkg::mubi4_t io_infra;
-    prim_mubi_pkg::mubi4_t main_infra;
-    prim_mubi_pkg::mubi4_t io_secure;
-    prim_mubi_pkg::mubi4_t main_secure;
-    prim_mubi_pkg::mubi4_t io_timers;
-    prim_mubi_pkg::mubi4_t io_peri;
-  } clkmgr_cg_en_t;
-
 
   typedef struct packed {
     logic [4-1:0] idle;

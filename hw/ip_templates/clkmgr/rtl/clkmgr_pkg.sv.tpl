@@ -58,20 +58,6 @@ package clkmgr_pkg;
 
   parameter int NumOutputClk = ${len(all_clocks)};
 
-  // The structs below serve the single power-domain clock manager (clkmgr.sv). They hold every
-  // clock, and the clock gating indication of every clock.
-  typedef struct packed {
-% for clk in all_clocks:
-    logic ${clk};
-% endfor
-  } clkmgr_out_t;
-
-  typedef struct packed {
-% for clk in all_clocks:
-    prim_mubi_pkg::mubi4_t ${clk.split('clk_')[-1]};
-% endfor
-  } clkmgr_cg_en_t;
-
 % for intf, eps in exported_clks.items():
   typedef struct packed {
   % for ep, clks in eps.items():
