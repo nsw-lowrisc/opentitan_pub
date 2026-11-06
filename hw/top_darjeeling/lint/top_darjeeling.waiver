@@ -12,7 +12,7 @@ set_clock_drivers prim_clock_buf prim_clock_mux2
 waive -rules RESET_MUX -location {top_darjeeling.sv darjeeling_pd_main.sv darjeeling_pd_aon.sv} -regexp {Asynchronous reset .*rstmgr_resets(_i|_o)?\.rst.* is driven by a multiplexer} \
       -comment "This is dedicated reset infrastructure, and hence permissible"
 
-waive -rules RESET_MUX -location {rstmgr.sv} -msg {Asynchronous reset 'scan_rst_ni' reaches a multiplexer here, used as a reset 'rst_dst_ni' at} \
+waive -rules RESET_MUX -location {rstmgr_part_primary.sv rstmgr_part_secondary.sv} -msg {Asynchronous reset 'scan_rst_ni' reaches a multiplexer here, used as a reset 'rst_dst_ni' at} \
       -comment "This is dedicated reset infrastructure, and hence permissible"
 
 # Scan reset is a legal asynchronous reset.

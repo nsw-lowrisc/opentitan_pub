@@ -262,11 +262,11 @@ module tb;
   // The gpiodpi module allows the host to directly control gpio when enabled.
   gpiodpi u_gpiodpi(
 `ifdef GATE_LEVEL
-    .clk_i(dut.top_earlgrey.earlgrey_pd_aon.u_clkmgr.clocks_o_clk_io_div4_peri),
-    .rst_ni(dut.top_earlgrey.earlgrey_pd_aon.u_rstmgr.resets_o_rst_lc_io_div4_n_1_),
+    .clk_i(dut.top_earlgrey.earlgrey_pd_main.u_clkmgr_part_primary.clocks_o_clk_io_div4_peri),
+    .rst_ni(dut.top_earlgrey.earlgrey_pd_main.u_rstmgr_part_primary.resets_o_rst_lc_io_div4_n_1_),
 `else
-    .clk_i(dut.top_earlgrey.earlgrey_pd_aon.u_clkmgr.clocks_o.clk_io_div4_peri),
-    .rst_ni(dut.top_earlgrey.earlgrey_pd_aon.u_rstmgr.resets_o.rst_lc_io_div4_n[rstmgr_pkg::DomainMainSel]),
+    .clk_i(dut.top_earlgrey.earlgrey_pd_main.u_clkmgr_part_primary.clocks_o.clk_io_div4_peri),
+    .rst_ni(dut.top_earlgrey.earlgrey_pd_main.u_rstmgr_part_primary.resets_o.rst_lc_io_div4_n[rstmgr_pkg::DomainMainSel]),
 `endif
     .active(u_tb_dpi_if.enable_gpiodpi),
     .gpio_p2d(gpiodpi_p2d),
@@ -354,11 +354,11 @@ module tb;
     .FREQ('d24_000_000)
   ) u_uartdpi0(
 `ifdef GATE_LEVEL
-   .clk_i(dut.top_earlgrey.earlgrey_pd_aon.u_clkmgr.clocks_o_clk_io_div4_peri),
-   .rst_ni(dut.top_earlgrey.earlgrey_pd_aon.u_rstmgr.resets_o_rst_lc_io_div4_n_1_),
+   .clk_i(dut.top_earlgrey.earlgrey_pd_main.u_clkmgr_part_primary.clocks_o_clk_io_div4_peri),
+   .rst_ni(dut.top_earlgrey.earlgrey_pd_main.u_rstmgr_part_primary.resets_o_rst_lc_io_div4_n_1_),
 `else
-   .clk_i(dut.top_earlgrey.earlgrey_pd_aon.u_clkmgr.clocks_o.clk_io_div4_peri),
-   .rst_ni(dut.top_earlgrey.earlgrey_pd_aon.u_rstmgr.resets_o.rst_lc_io_div4_n[rstmgr_pkg::DomainMainSel]),
+   .clk_i(dut.top_earlgrey.earlgrey_pd_main.u_clkmgr_part_primary.clocks_o.clk_io_div4_peri),
+   .rst_ni(dut.top_earlgrey.earlgrey_pd_main.u_rstmgr_part_primary.resets_o.rst_lc_io_div4_n[rstmgr_pkg::DomainMainSel]),
 `endif
     .active(u_tb_dpi_if.enable_uartdpi),
     .tx_o(uartdpi_tx),
