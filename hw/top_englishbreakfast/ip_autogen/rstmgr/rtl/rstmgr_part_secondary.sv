@@ -360,10 +360,40 @@ module rstmgr_part_secondary
   assign intraip_s2p_o.rst_lc_src_n_main = rst_lc_src_n[DomainMainSel];
   assign intraip_s2p_o.rst_sys_src_n_main = rst_sys_src_n[DomainMainSel];
   assign intraip_s2p_o.pwr                  = pwr_i;
-  // The consistency and FSM errors of the leaves that this partition hosts. Without leaves,
-  // there is no error.
-  assign intraip_s2p_o.cnsty_chk_err          = |cnsty_chk_errs;
-  assign intraip_s2p_o.fsm_err                = |fsm_errs;
+  // The store of the ERR_CODE CSR, whose register type is hwext. One bit per field:
+  //  - REG_INTG_ERR: the integrity error of the register file.
+  //  - RESET_CONSISTENCY_ERR: the consistency errors of the leaves of both partitions.
+  //  - FSM_ERR: the FSM errors of the leaves of both partitions.
+  // They are kept here, in the secondary partition, as it is always in the Aon power domain. This
+  // keeps them through a deep sleep cycle, including an error detected while entering deep sleep,
+  // as long as the checkers' clock runs until their resets assert. Tampering with the Aon resets is
+  // always captured.
+  // Note: the reset that an escalation triggers must clear these bits, or the alert would fire
+  // again after the escalation.
+  logic cnsty_chk_err, fsm_err;
+  logic reg_intg_err_q, cnsty_chk_err_q, fsm_err_q;
+  assign cnsty_chk_err = |cnsty_chk_errs || intraip_p2s_i.cnsty_chk_err;
+  assign fsm_err       = |fsm_errs || intraip_p2s_i.fsm_err;
+
+  always_ff @(posedge clk_i or negedge rst_ni) begin
+    if (!rst_ni) begin
+      reg_intg_err_q  <= 1'b0;
+      cnsty_chk_err_q <= 1'b0;
+      fsm_err_q       <= 1'b0;
+    end else begin
+      reg_intg_err_q  <= reg_intg_err_q || intraip_p2s_i.reg_intg_err;
+      cnsty_chk_err_q <= cnsty_chk_err_q || cnsty_chk_err;
+      fsm_err_q       <= fsm_err_q || fsm_err;
+    end
+  end
+
+  assign intraip_s2p_o.reg_intg_err           = reg_intg_err_q;
+  assign intraip_s2p_o.cnsty_chk_err          = cnsty_chk_err_q;
+  assign intraip_s2p_o.fsm_err                = fsm_err_q;
+
+  `ASSERT(RegIntgErrRecordSticky_A, reg_intg_err_q |=> reg_intg_err_q)
+  `ASSERT(CnstyChkErrRecordSticky_A, cnsty_chk_err_q |=> cnsty_chk_err_q)
+  `ASSERT(FsmErrRecordSticky_A, fsm_err_q |=> fsm_err_q)
 
   ////////////////////////////////////////////////////
   // Assertions                                     //

@@ -116,7 +116,10 @@ package rstmgr_pkg;
     logic rst_sys_src_n_main;
     // The power manager's reset request, forwarded for the RESET_INFO logic.
     pwrmgr_pkg::pwr_rst_req_t pwr;
-    // The aggregated errors of the leaf resets that the secondary partition hosts.
+    // The record of the errors of ERR_CODE, which this partition keeps in the always-on power
+    // domain: the integrity error of the primary partition's register file, and the consistency
+    // and FSM errors of the leaf resets of both partitions.
+    logic reg_intg_err;
     logic cnsty_chk_err;
     logic fsm_err;
     // The resets that the secondary partition generates and the primary partition's power domain
@@ -133,9 +136,12 @@ package rstmgr_pkg;
 
   // Primary to secondary
   typedef struct packed {
-    // Nothing flows to the secondary partition in this configuration. The reserved field keeps the
-    // struct from being empty.
-    logic reserved;
+    // The errors of this partition, for the secondary partition's record: the integrity error of
+    // the register file, and the aggregated consistency and FSM errors of the leaf resets that this
+    // partition hosts.
+    logic reg_intg_err;
+    logic cnsty_chk_err;
+    logic fsm_err;
   } intraip_p2s_t;
 
   // cpu reset requests and status

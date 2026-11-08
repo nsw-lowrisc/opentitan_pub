@@ -127,23 +127,25 @@ module rstmgr_part_primary
 
   // consistency sparse fsm errors
 
-  assign hw2reg.err_code.reg_intg_err.d  = 1'b1;
-  assign hw2reg.err_code.reg_intg_err.de = reg_intg_err;
-  assign hw2reg.err_code.reset_consistency_err.d  = 1'b1;
-  assign hw2reg.err_code.reset_consistency_err.de = |cnsty_chk_errs ||
-                                                    intraip_s2p_i.cnsty_chk_err;
-  assign hw2reg.err_code.fsm_err.d  = 1'b1;
-  assign hw2reg.err_code.fsm_err.de = |fsm_errs || intraip_s2p_i.fsm_err;
+  // ERR_CODE is external: the register file keeps no state for it. This partition's errors go to
+  // the secondary partition, which keeps the record of all of them in the always-on power domain.
+  // ERR_CODE and the alerts read that record.
+  assign intraip_p2s_o.reg_intg_err  = reg_intg_err;
+  assign intraip_p2s_o.cnsty_chk_err = |cnsty_chk_errs;
+  assign intraip_p2s_o.fsm_err       = |fsm_errs;
+
+  assign hw2reg.err_code.reg_intg_err.d          = intraip_s2p_i.reg_intg_err;
+  assign hw2reg.err_code.reset_consistency_err.d = intraip_s2p_i.cnsty_chk_err;
+  assign hw2reg.err_code.fsm_err.d               = intraip_s2p_i.fsm_err;
   ////////////////////////////////////////////////////
   // Alerts                                         //
   ////////////////////////////////////////////////////
   logic [NumAlerts-1:0] alert_test, alerts;
 
   // All of these are fatal alerts
-  assign alerts[0] = reg2hw.err_code.reg_intg_err.q |
-                     (|reg2hw.err_code.fsm_err.q);
+  assign alerts[0] = intraip_s2p_i.reg_intg_err | intraip_s2p_i.fsm_err;
 
-  assign alerts[1] = reg2hw.err_code.reset_consistency_err.q;
+  assign alerts[1] = intraip_s2p_i.cnsty_chk_err;
 
   assign alert_test = {
     reg2hw.alert_test.fatal_cnsty_fault.q & reg2hw.alert_test.fatal_cnsty_fault.qe,

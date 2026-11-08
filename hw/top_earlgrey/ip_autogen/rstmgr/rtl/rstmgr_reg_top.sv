@@ -224,6 +224,7 @@ module rstmgr_reg_top (
   logic sw_rst_ctrl_n_9_we;
   logic sw_rst_ctrl_n_9_qs;
   logic sw_rst_ctrl_n_9_wd;
+  logic err_code_re;
   logic err_code_reg_intg_err_qs;
   logic err_code_reset_consistency_err_qs;
   logic err_code_fsm_err_qs;
@@ -1324,88 +1325,49 @@ module rstmgr_reg_top (
   );
 
 
-  // R[err_code]: V(False)
+  // R[err_code]: V(True)
   //   F[reg_intg_err]: 0:0
-  prim_subreg #(
-    .DW      (1),
-    .SwAccess(prim_subreg_pkg::SwAccessRO),
-    .RESVAL  (1'h0),
-    .Mubi    (1'b0)
+  prim_subreg_ext #(
+    .DW    (1)
   ) u_err_code_reg_intg_err (
-    .clk_i   (clk_i),
-    .rst_ni  (rst_ni),
-    .reinit_i(1'b0),
-
-    // from register interface
+    .re     (err_code_re),
     .we     (1'b0),
     .wd     ('0),
-
-    // from internal hardware
-    .de     (hw2reg.err_code.reg_intg_err.de),
     .d      (hw2reg.err_code.reg_intg_err.d),
-
-    // to internal hardware
+    .qre    (),
     .qe     (),
-    .q      (reg2hw.err_code.reg_intg_err.q),
+    .q      (),
     .ds     (),
-
-    // to register interface (read)
     .qs     (err_code_reg_intg_err_qs)
   );
 
   //   F[reset_consistency_err]: 1:1
-  prim_subreg #(
-    .DW      (1),
-    .SwAccess(prim_subreg_pkg::SwAccessRO),
-    .RESVAL  (1'h0),
-    .Mubi    (1'b0)
+  prim_subreg_ext #(
+    .DW    (1)
   ) u_err_code_reset_consistency_err (
-    .clk_i   (clk_i),
-    .rst_ni  (rst_ni),
-    .reinit_i(1'b0),
-
-    // from register interface
+    .re     (err_code_re),
     .we     (1'b0),
     .wd     ('0),
-
-    // from internal hardware
-    .de     (hw2reg.err_code.reset_consistency_err.de),
     .d      (hw2reg.err_code.reset_consistency_err.d),
-
-    // to internal hardware
+    .qre    (),
     .qe     (),
-    .q      (reg2hw.err_code.reset_consistency_err.q),
+    .q      (),
     .ds     (),
-
-    // to register interface (read)
     .qs     (err_code_reset_consistency_err_qs)
   );
 
   //   F[fsm_err]: 2:2
-  prim_subreg #(
-    .DW      (1),
-    .SwAccess(prim_subreg_pkg::SwAccessRO),
-    .RESVAL  (1'h0),
-    .Mubi    (1'b0)
+  prim_subreg_ext #(
+    .DW    (1)
   ) u_err_code_fsm_err (
-    .clk_i   (clk_i),
-    .rst_ni  (rst_ni),
-    .reinit_i(1'b0),
-
-    // from register interface
+    .re     (err_code_re),
     .we     (1'b0),
     .wd     ('0),
-
-    // from internal hardware
-    .de     (hw2reg.err_code.fsm_err.de),
     .d      (hw2reg.err_code.fsm_err.d),
-
-    // to internal hardware
+    .qre    (),
     .qe     (),
-    .q      (reg2hw.err_code.fsm_err.q),
+    .q      (),
     .ds     (),
-
-    // to register interface (read)
     .qs     (err_code_fsm_err_qs)
   );
 
@@ -1586,6 +1548,7 @@ module rstmgr_reg_top (
   assign sw_rst_ctrl_n_9_we = addr_hit[30] & reg_we & !reg_error;
 
   assign sw_rst_ctrl_n_9_wd = reg_wdata[0];
+  assign err_code_re = addr_hit[31] & reg_re & !reg_error;
 
   // Assign write-enables to checker logic vector.
   always_comb begin

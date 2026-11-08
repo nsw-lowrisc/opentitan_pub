@@ -711,7 +711,8 @@
         A bit vector of all the errors that have occurred in reset manager
       ''',
       swaccess: "ro",
-      hwaccess: "hrw",
+      hwaccess: "hwo",
+      hwext: "true",
       fields: [
         { bits: "0",
           name: "REG_INTG_ERR",
