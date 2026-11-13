@@ -257,6 +257,14 @@
       package: "",
     },
 
+    { struct:  "logic",
+      type:    "uni",
+      name:    "main_pd_aon_clk_en",
+      act:     "req",
+      package: "",
+      desc:    "The always-on clock may enter the power domain that powers down, because that domain is powered and its isolation is released. The clkmgr gates the always-on clock that it gives that power domain with it. It is the inverse of the early clamp, pwr_clamp_env, on the always-on (slow) clock.",
+    },
+
     { struct:  "pwrmgr_data",
       type:    "uni",
       name:    "rom_ctrl",
